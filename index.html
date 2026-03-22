@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>CPA Cleanup Toolbox</title>
+  <title>CPA 清理工具</title>
   <style>
     :root {
       --bg: #eef3f8;
@@ -198,7 +198,7 @@
 <body>
   <main class="shell">
     <section class="hero">
-      <h1>CPA Cleanup Toolbox</h1>
+      <h1>CPA 清理工具</h1>
       <div class="hero-subtitle">
         纯静态独立清理工具。页面本身不改 `cli-proxy-api.exe`，也不改 `static/management.html`。
         删除前会先把原始 auth 文件备份到当前浏览器本地回收站，再调用现有管理 API 删除，尽量降低误删风险。
@@ -207,6 +207,11 @@
         <span class="pill">不修改上游二进制</span>
         <span class="pill">不修改现有管理页</span>
         <span class="pill warn">回收站保存的是原始凭证 JSON，请只在受信任浏览器使用</span>
+      </div>
+      <div class="mini">
+        思路参考开源项目
+        <a href="https://github.com/qcmuu/cpa-codex-cleanup" target="_blank" rel="noopener noreferrer">qcmuu/cpa-codex-cleanup</a>，
+        当前页面为独立整理后的实现。
       </div>
     </section>
 
@@ -217,64 +222,64 @@
           <span id="trash_status" class="pill">回收站初始化中</span>
         </div>
         <div class="panel-desc">
-          Token 只保存在当前页面内存，不会自动写入本地存储。回收站会把删除前的原始 JSON 保存到当前浏览器 IndexedDB，用于恢复。
+          管理密码只保存在当前页面内存，不会自动写入本地存储。回收站会把删除前的原始 JSON 保存到当前浏览器 IndexedDB，用于恢复。
         </div>
 
         <div class="field">
-          <label for="management_url">Management URL</label>
+          <label for="management_url">管理地址</label>
           <input id="management_url" type="text" value="http://127.0.0.1:8317/management.html" />
-          <div class="hint">支持填写 `management.html`、`/v0/management`、`/auth-files` 或根地址，工具会自动归一化。</div>
+          <div class="hint">支持填写 `management.html`、`/v0/management`、`/auth-files` 或根地址，工具会自动转换成正确的接口地址。</div>
         </div>
 
         <div class="field">
-          <label for="management_token">Management Token</label>
-          <input id="management_token" type="password" placeholder="只在当前页面内存中使用，不会自动保存" />
+          <label for="management_token">管理密码</label>
+          <input id="management_token" type="password" placeholder="访问 CPA 管理接口用的密码，只在当前页面内存中使用" />
         </div>
 
         <div class="field-row">
           <div class="field">
-            <label for="probe_timeout">探测超时（秒）</label>
+            <label for="probe_timeout">每次试用等待（秒）</label>
             <input id="probe_timeout" type="number" min="1" value="8" />
           </div>
           <div class="field">
-            <label for="probe_workers">探测并发</label>
+            <label for="probe_workers">同时试用数量</label>
             <input id="probe_workers" type="number" min="1" value="8" />
           </div>
         </div>
 
         <div class="field-row">
           <div class="field">
-            <label for="delete_workers">删除并发</label>
+            <label for="delete_workers">同时删除数量</label>
             <input id="delete_workers" type="number" min="1" value="4" />
           </div>
           <div class="field">
-            <label for="max_active_probes">最大主动探测数</label>
+            <label for="max_active_probes">最多试用多少个</label>
             <input id="max_active_probes" type="number" min="0" value="120" />
           </div>
         </div>
 
         <div class="field-row">
           <div class="field">
-            <label for="probe_target_url">探测目标 URL</label>
+            <label for="probe_target_url">试用目标接口</label>
             <input id="probe_target_url" type="text" value="https://chatgpt.com/backend-api/codex/responses/compact" />
           </div>
           <div class="field">
-            <label for="probe_model">探测模型</label>
+            <label for="probe_model">试用模型名</label>
             <input id="probe_model" type="text" value="gpt-5.1-codex" />
           </div>
         </div>
 
         <div class="field-stack">
-          <div class="inline"><input id="active_probe" type="checkbox" checked /><label for="active_probe">开启主动探测</label></div>
-          <div class="inline"><input id="enable_401_followup" type="checkbox" checked /><label for="enable_401_followup">执行 401 补删</label></div>
-          <div class="inline"><input id="strict_backup" type="checkbox" checked /><label for="strict_backup">删除前必须成功写入回收站</label></div>
+          <div class="inline"><input id="active_probe" type="checkbox" checked /><label for="active_probe">对可疑账号做一次实际试用</label></div>
+          <div class="inline"><input id="enable_401_followup" type="checkbox" checked /><label for="enable_401_followup">额外清理 401 / 未授权 项</label></div>
+          <div class="inline"><input id="strict_backup" type="checkbox" checked /><label for="strict_backup">备份失败就不删除</label></div>
         </div>
 
-        <div class="notice-box">建议工作流：先点“扫描候选”预览，再点“移入回收站并删除”。这样即使误删，也能从本地回收站直接恢复。</div>
+        <div class="notice-box">建议工作流：先点“先检查一遍”预览，再点“备份后删除”。这样即使误删，也能从本地回收站直接恢复。</div>
 
         <div class="actions">
-          <button id="scan_btn" type="button">扫描候选</button>
-          <button id="delete_btn" type="button" class="warn" disabled>移入回收站并删除</button>
+          <button id="scan_btn" type="button">先检查一遍</button>
+          <button id="delete_btn" type="button" class="warn" disabled>备份后删除</button>
           <button id="clear_preview_btn" type="button" class="secondary">清空预览</button>
         </div>
 
@@ -288,19 +293,19 @@
             <span id="run_status" class="pill">等待执行</span>
           </div>
           <div class="stats">
-            <div class="stat"><div class="stat-key">扫描总数</div><div id="m_scanned" class="stat-value">-</div></div>
-            <div class="stat"><div class="stat-key">主规则命中</div><div id="m_matched" class="stat-value">-</div></div>
-            <div class="stat"><div class="stat-key">401 预估候选</div><div id="m_followup" class="stat-value">-</div></div>
+            <div class="stat"><div class="stat-key">检查总数</div><div id="m_scanned" class="stat-value">-</div></div>
+            <div class="stat"><div class="stat-key">明确异常</div><div id="m_matched" class="stat-value">-</div></div>
+            <div class="stat"><div class="stat-key">疑似 401</div><div id="m_followup" class="stat-value">-</div></div>
             <div class="stat"><div class="stat-key">已删除</div><div id="m_deleted" class="stat-value">-</div></div>
             <div class="stat"><div class="stat-key">删除失败</div><div id="m_failed" class="stat-value">-</div></div>
-            <div class="stat"><div class="stat-key">回收站条目</div><div id="m_trash" class="stat-value">-</div></div>
+            <div class="stat"><div class="stat-key">回收站数量</div><div id="m_trash" class="stat-value">-</div></div>
           </div>
         </section>
 
         <section class="panel">
           <div class="section-title">
-            <h2>候选预览</h2>
-            <span id="preview_hint" class="mini">尚未扫描</span>
+            <h2>检查结果预览</h2>
+            <span id="preview_hint" class="mini">尚未检查</span>
           </div>
           <div class="table-wrap">
             <table>
@@ -333,7 +338,7 @@
             <h2>本地回收站</h2>
             <span id="trash_count_badge" class="pill">0 条</span>
           </div>
-          <div class="panel-desc">恢复时会重新调用当前管理 API 的上传接口写回原始文件。管理 token 不保存在回收站里，恢复前需要重新输入。</div>
+          <div class="panel-desc">恢复时会重新调用当前管理 API 的上传接口写回原始文件。管理密码不保存在回收站里，恢复前需要重新输入。</div>
           <div class="actions">
             <button id="refresh_trash_btn" type="button" class="secondary">刷新回收站</button>
             <button id="export_trash_btn" type="button" class="secondary">导出回收站</button>
@@ -565,7 +570,7 @@
       try {
         url = new URL(value);
       } catch (error) {
-        throw new Error("Management URL 格式无效");
+        throw new Error("管理地址格式无效");
       }
       let path = url.pathname || "";
       if (!path || path === "/") {
@@ -589,10 +594,10 @@
       const managementRoot = normalizeManagementRoot(els.managementUrl.value);
       const token = trimText(els.managementToken.value);
       if (!managementRoot) {
-        throw new Error("请填写 Management URL");
+        throw new Error("请填写管理地址");
       }
       if (!token) {
-        throw new Error("请填写 Management Token");
+        throw new Error("请填写管理密码");
       }
       return {
         managementRoot,
@@ -748,7 +753,7 @@
       const { matched, preview401 } = scanResult;
       if (!matched.length && !preview401.length) {
         els.previewBody.innerHTML = `<tr><td colspan="5" class="empty">没有发现待删除候选</td></tr>`;
-        els.previewHint.textContent = "扫描完成，没有发现命中项";
+        els.previewHint.textContent = "检查完成，没有发现异常项";
         return;
       }
 
@@ -775,20 +780,20 @@
               <div class="mini">${escapeHtml(item.email || item.account || "")}</div>
             </td>
             <td>${escapeHtml(item.provider || "-")}</td>
-            <td><span class="reason-tag">401_followup</span></td>
+            <td><span class="reason-tag">疑似401</span></td>
             <td class="mini">${escapeHtml(clipText(item.status_message || "-", 160))}</td>
             <td><span class="source-tag">${escapeHtml(item.source || "file")}</span></td>
           </tr>
         `);
       }
       els.previewBody.innerHTML = rows.join("");
-      els.previewHint.textContent = `主规则 ${matched.length} 项，401 预估 ${preview401.length} 项`;
+      els.previewHint.textContent = `明确异常 ${matched.length} 项，疑似 401 ${preview401.length} 项`;
     }
 
     function clearPreview() {
       state.scanResult = null;
       els.previewBody.innerHTML = `<tr><td colspan="5" class="empty">还没有候选记录</td></tr>`;
-      els.previewHint.textContent = "尚未扫描";
+      els.previewHint.textContent = "尚未检查";
       resetMetrics();
       setStatus("等待执行");
       setBusy(false);
@@ -862,8 +867,8 @@
       resetLogs();
       resetMetrics();
       setBusy(true);
-      setStatus("扫描中");
-      log(`使用管理根路径: ${config.managementRoot}`);
+      setStatus("检查中");
+      log(`使用管理接口根路径: ${config.managementRoot}`);
       const files = await fetchAuthFiles(config);
       log(`拉取 auth-files 成功，总数: ${files.length}`);
 
@@ -889,13 +894,13 @@
       }
 
       if (config.maxActiveProbes >= 0 && probeCandidates.length > config.maxActiveProbes) {
-        log(`主动探测候选 ${probeCandidates.length} 个，仅探测前 ${config.maxActiveProbes} 个`);
+        log(`可疑账号共有 ${probeCandidates.length} 个，仅实际试用前 ${config.maxActiveProbes} 个`);
         probeCandidates.length = config.maxActiveProbes;
       }
 
       const probedHits = [];
       if (config.activeProbe && config.maxActiveProbes !== 0 && probeCandidates.length) {
-        log(`开始主动探测，候选 ${probeCandidates.length} 个`);
+        log(`开始实际试用可疑账号，共 ${probeCandidates.length} 个`);
         let finished = 0;
         const results = await promisePool(probeCandidates, config.probeWorkers, async (item) => {
           try {
@@ -916,17 +921,17 @@
             }
             finished += 1;
             if (reason) {
-              log(`探测命中: ${item.name} -> ${reason}`);
+              log(`试用发现异常: ${item.name} -> ${reason}`);
             }
             if (finished % 20 === 0 || finished === probeCandidates.length) {
-              log(`探测进度: ${finished}/${probeCandidates.length}`);
+              log(`试用进度: ${finished}/${probeCandidates.length}`);
             }
             return reason ? { ...item, keyword: reason } : null;
           } catch (error) {
             finished += 1;
-            log(`探测异常: ${item.name} -> ${error.message}`);
+            log(`试用异常: ${item.name} -> ${error.message}`);
             if (finished % 20 === 0 || finished === probeCandidates.length) {
-              log(`探测进度: ${finished}/${probeCandidates.length}`);
+              log(`试用进度: ${finished}/${probeCandidates.length}`);
             }
             return null;
           }
@@ -937,7 +942,7 @@
           }
         }
       } else {
-        log("主动探测已关闭或无候选");
+        log("已关闭实际试用，或当前没有可疑账号");
       }
 
       const merged = new Map();
@@ -960,8 +965,8 @@
       setMetric("deleted", 0);
       setMetric("failed", 0);
       renderPreview(state.scanResult);
-      log(`扫描完成: 主规则命中 ${matched.length} 个，401 预估 ${preview401.length} 个`);
-      setStatus("扫描完成", matched.length || preview401.length ? "" : "warn");
+      log(`检查完成: 明确异常 ${matched.length} 个，疑似 401 ${preview401.length} 个`);
+      setStatus("检查完成", matched.length || preview401.length ? "" : "warn");
       setBusy(false);
     }
 
@@ -995,7 +1000,7 @@
         throw new Error("回收站尚未就绪，禁止删除");
       }
       if (!state.scanResult) {
-        throw new Error("请先扫描候选");
+        throw new Error("请先检查一遍");
       }
 
       const { config, matched } = state.scanResult;
@@ -1006,7 +1011,7 @@
       }
 
       const confirmed = window.confirm(
-        `将尝试删除 ${totalEstimate} 个候选（主规则 ${matched.length} 个，401 预估 ${estimated401} 个）。\n` +
+        `将尝试删除 ${totalEstimate} 个候选（明确异常 ${matched.length} 个，疑似 401 ${estimated401} 个）。\n` +
         "删除前会先把原始 JSON 写入本地回收站。是否继续？"
       );
       if (!confirmed) {
@@ -1017,7 +1022,7 @@
       let deletedCount = 0;
       setBusy(true);
       setStatus("删除中", "warn");
-      log(`开始删除主规则命中项: ${matched.length} 个`);
+      log(`开始删除明确异常项: ${matched.length} 个`);
 
       const mainResults = await promisePool(matched, config.deleteWorkers, async (item) => {
         const ok = await backupAndDelete(config, item, failures);
@@ -1035,11 +1040,11 @@
       });
 
       if (config.enable401Followup) {
-        log("开始执行 401 补删");
+        log("开始额外清理 401 / 未授权 项");
         try {
           const files = await fetchAuthFiles(config);
           const followupTargets = files.filter((file) => isDeletableFile(file) && !deletedNames.has(file.name) && looks401(file));
-          log(`401 补删候选: ${followupTargets.length} 个`);
+          log(`额外清理候选: ${followupTargets.length} 个`);
           await promisePool(followupTargets, config.deleteWorkers, async (item) => {
             const ok = await backupAndDelete(config, { ...item, keyword: "401_followup" }, failures);
             if (ok) {
@@ -1048,8 +1053,8 @@
             return ok;
           });
         } catch (error) {
-          failures.push({ name: "<401_followup>", error: error.message });
-          log(`401 补删失败: ${error.message}`);
+          failures.push({ name: "<extra_401_cleanup>", error: error.message });
+          log(`额外清理失败: ${error.message}`);
         }
       }
 
@@ -1075,7 +1080,7 @@
       const config = buildConfig();
       if (config.managementRoot !== entry.apiBase) {
         const confirmed = window.confirm(
-          `当前 Management URL 与回收站记录不一致。\n当前: ${config.managementRoot}\n记录: ${entry.apiBase}\n\n仍然按当前地址恢复吗？`
+          `当前管理地址与回收站记录不一致。\n当前: ${config.managementRoot}\n记录: ${entry.apiBase}\n\n仍然按当前地址恢复吗？`
         );
         if (!confirmed) {
           return;
@@ -1170,8 +1175,8 @@
       try {
         await performScan();
       } catch (error) {
-        log(`扫描失败: ${error.message}`);
-        setStatus(`扫描失败: ${error.message}`, "warn");
+        log(`检查失败: ${error.message}`);
+        setStatus(`检查失败: ${error.message}`, "warn");
         setBusy(false);
       }
     });
