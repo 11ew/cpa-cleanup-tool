@@ -1,0 +1,1279 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CPA Cleanup Toolbox</title>
+  <style>
+    :root {
+      --bg: #eef3f8;
+      --panel: rgba(255,255,255,.95);
+      --line: #d7e0ea;
+      --ink: #102033;
+      --sub: #5c6c7f;
+      --accent: #0f766e;
+      --warn: #a16207;
+      --danger: #b42318;
+      --ok: #166142;
+      --shadow: 0 18px 42px rgba(20,37,58,.08);
+      --mono: "JetBrains Mono", Consolas, "Courier New", monospace;
+      --sans: "IBM Plex Sans", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: var(--sans);
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 580px at 12% -14%, #dcefea 0%, transparent 55%),
+        radial-gradient(1200px 620px at 88% -8%, #dce8ff 0%, transparent 48%),
+        var(--bg);
+      padding: 22px 14px 42px;
+    }
+    .shell { width: min(1340px,100%); margin: 0 auto; display: grid; gap: 14px; }
+    .hero,.panel {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+    .hero { padding: 18px 20px; display: grid; gap: 8px; }
+    h1,h2 { margin: 0; }
+    h1 { font-size: clamp(26px,4vw,34px); }
+    h2 { font-size: 16px; }
+    .hero-subtitle,.panel-desc,.hint,.mini {
+      color: var(--sub);
+      font-size: 13px;
+      line-height: 1.58;
+    }
+    .notice-strip,.actions,.trash-actions,.trash-meta,.trash-header {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 10px;
+      align-items: center;
+    }
+    .pill,.reason-tag,.source-tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+      border: 1px solid transparent;
+      white-space: nowrap;
+    }
+    .pill { background: #edf6f3; color: #14532d; }
+    .pill.warn,.reason-tag { background: #fff4e7; color: #9a3412; border-color: #f0d1ac; }
+    .source-tag { background: #edf6f3; color: #115e59; border-color: #bfddd7; }
+    .layout { display: grid; gap: 14px; grid-template-columns: minmax(360px,420px) minmax(0,1fr); }
+    .right-stack,.panel,.field,.field-stack { display: grid; gap: 12px; }
+    .panel { padding: 16px; }
+    .section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .field-row { display: grid; gap: 10px; grid-template-columns: repeat(2,minmax(0,1fr)); }
+    label { font-size: 12px; color: var(--sub); font-weight: 700; }
+    input[type="text"],input[type="password"],input[type="number"],textarea {
+      width: 100%;
+      border: 1px solid #b8c7d7;
+      border-radius: 12px;
+      background: #fff;
+      color: var(--ink);
+      padding: 10px 12px;
+      font-size: 14px;
+      line-height: 1.45;
+      transition: border-color .15s ease, box-shadow .15s ease;
+    }
+    textarea { min-height: 110px; resize: vertical; font-family: var(--mono); font-size: 12px; }
+    input:focus,textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(15,118,110,.12);
+    }
+    .inline { display: flex; align-items: center; gap: 8px; min-height: 42px; }
+    .inline input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent); }
+    .notice-box,.warn-box {
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 12px;
+      line-height: 1.55;
+    }
+    .notice-box { border: 1px solid #bfe2d3; background: #f3fbf7; color: var(--ok); }
+    .warn-box { border: 1px solid #efc3c3; background: #fff7f7; color: #8f2d2d; }
+    button,.file-button {
+      border: 0;
+      border-radius: 999px;
+      padding: 10px 16px;
+      font-size: 14px;
+      font-weight: 800;
+      cursor: pointer;
+      color: #fff;
+      background: linear-gradient(135deg,var(--accent),#0f5f59);
+      transition: transform .12s ease, filter .12s ease, opacity .12s ease;
+      text-decoration: none;
+    }
+    button:hover:not(:disabled),.file-button:hover { filter: brightness(1.03); }
+    button:active:not(:disabled),.file-button:active { transform: translateY(1px); }
+    button.secondary,.file-button.secondary {
+      color: var(--ink);
+      background: #fff;
+      border: 1px solid var(--line);
+      box-shadow: 0 6px 18px rgba(20,37,58,.05);
+    }
+    button.warn { background: linear-gradient(135deg,#b45309,#92400e); }
+    button.danger { background: linear-gradient(135deg,#c2410c,#9f1239); }
+    button:disabled { opacity: .56; cursor: not-allowed; transform: none; }
+    input[type="file"] { display: none; }
+    .stats { display: grid; gap: 10px; grid-template-columns: repeat(3,minmax(0,1fr)); }
+    .stat {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fff;
+      padding: 12px;
+    }
+    .stat-key { font-size: 12px; color: var(--sub); }
+    .stat-value { margin-top: 4px; font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; }
+    .table-wrap,.trash-wrap {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      overflow: hidden;
+      background: #fff;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th,td { text-align: left; padding: 12px 14px; border-bottom: 1px solid #ebf0f5; vertical-align: top; }
+    th { font-size: 12px; color: var(--sub); background: #f7fafc; white-space: nowrap; }
+    tbody tr:hover { background: #fbfcfe; }
+    .code { font-family: var(--mono); font-size: 12px; word-break: break-all; }
+    pre {
+      margin: 0;
+      min-height: 260px;
+      max-height: 48vh;
+      overflow: auto;
+      border: 1px solid #c8d5e4;
+      border-radius: 14px;
+      background: #0e1a2b;
+      color: #d8e7ff;
+      padding: 14px;
+      font: 12px/1.55 var(--mono);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .trash-list { display: grid; gap: 10px; padding: 12px; }
+    .trash-item {
+      border: 1px solid #e4ebf3;
+      border-radius: 14px;
+      padding: 12px;
+      display: grid;
+      gap: 8px;
+      background: linear-gradient(180deg,#fff,#fbfcff);
+    }
+    .trash-title { font-weight: 800; word-break: break-all; }
+    .empty,.muted-box {
+      padding: 18px 14px;
+      color: var(--sub);
+      text-align: center;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+    .muted-box {
+      text-align: left;
+      border: 1px dashed #c6d2e0;
+      border-radius: 14px;
+      background: rgba(255,255,255,.66);
+    }
+    @media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } }
+    @media (max-width: 760px) {
+      .field-row,.stats { grid-template-columns: 1fr; }
+      .actions { flex-direction: column; }
+      button,.file-button { width: 100%; justify-content: center; }
+      th,td { padding: 10px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <h1>CPA Cleanup Toolbox</h1>
+      <div class="hero-subtitle">
+        纯静态独立清理工具。页面本身不改 `cli-proxy-api.exe`，也不改 `static/management.html`。
+        删除前会先把原始 auth 文件备份到当前浏览器本地回收站，再调用现有管理 API 删除，尽量降低误删风险。
+      </div>
+      <div class="notice-strip">
+        <span class="pill">不修改上游二进制</span>
+        <span class="pill">不修改现有管理页</span>
+        <span class="pill warn">回收站保存的是原始凭证 JSON，请只在受信任浏览器使用</span>
+      </div>
+    </section>
+
+    <section class="layout">
+      <section class="panel">
+        <div class="section-title">
+          <h2>连接与策略</h2>
+          <span id="trash_status" class="pill">回收站初始化中</span>
+        </div>
+        <div class="panel-desc">
+          Token 只保存在当前页面内存，不会自动写入本地存储。回收站会把删除前的原始 JSON 保存到当前浏览器 IndexedDB，用于恢复。
+        </div>
+
+        <div class="field">
+          <label for="management_url">Management URL</label>
+          <input id="management_url" type="text" value="http://127.0.0.1:8317/management.html" />
+          <div class="hint">支持填写 `management.html`、`/v0/management`、`/auth-files` 或根地址，工具会自动归一化。</div>
+        </div>
+
+        <div class="field">
+          <label for="management_token">Management Token</label>
+          <input id="management_token" type="password" placeholder="只在当前页面内存中使用，不会自动保存" />
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="probe_timeout">探测超时（秒）</label>
+            <input id="probe_timeout" type="number" min="1" value="8" />
+          </div>
+          <div class="field">
+            <label for="probe_workers">探测并发</label>
+            <input id="probe_workers" type="number" min="1" value="8" />
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="delete_workers">删除并发</label>
+            <input id="delete_workers" type="number" min="1" value="4" />
+          </div>
+          <div class="field">
+            <label for="max_active_probes">最大主动探测数</label>
+            <input id="max_active_probes" type="number" min="0" value="120" />
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="probe_target_url">探测目标 URL</label>
+            <input id="probe_target_url" type="text" value="https://chatgpt.com/backend-api/codex/responses/compact" />
+          </div>
+          <div class="field">
+            <label for="probe_model">探测模型</label>
+            <input id="probe_model" type="text" value="gpt-5.1-codex" />
+          </div>
+        </div>
+
+        <div class="field-stack">
+          <div class="inline"><input id="active_probe" type="checkbox" checked /><label for="active_probe">开启主动探测</label></div>
+          <div class="inline"><input id="enable_401_followup" type="checkbox" checked /><label for="enable_401_followup">执行 401 补删</label></div>
+          <div class="inline"><input id="strict_backup" type="checkbox" checked /><label for="strict_backup">删除前必须成功写入回收站</label></div>
+        </div>
+
+        <div class="notice-box">建议工作流：先点“扫描候选”预览，再点“移入回收站并删除”。这样即使误删，也能从本地回收站直接恢复。</div>
+
+        <div class="actions">
+          <button id="scan_btn" type="button">扫描候选</button>
+          <button id="delete_btn" type="button" class="warn" disabled>移入回收站并删除</button>
+          <button id="clear_preview_btn" type="button" class="secondary">清空预览</button>
+        </div>
+
+        <div class="warn-box">回收站里保存的是原始 auth JSON，通常包含敏感凭证。请仅在你自己的机器、受信任浏览器和受信任用户环境里使用。</div>
+      </section>
+
+      <section class="right-stack">
+        <section class="panel">
+          <div class="section-title">
+            <h2>执行概览</h2>
+            <span id="run_status" class="pill">等待执行</span>
+          </div>
+          <div class="stats">
+            <div class="stat"><div class="stat-key">扫描总数</div><div id="m_scanned" class="stat-value">-</div></div>
+            <div class="stat"><div class="stat-key">主规则命中</div><div id="m_matched" class="stat-value">-</div></div>
+            <div class="stat"><div class="stat-key">401 预估候选</div><div id="m_followup" class="stat-value">-</div></div>
+            <div class="stat"><div class="stat-key">已删除</div><div id="m_deleted" class="stat-value">-</div></div>
+            <div class="stat"><div class="stat-key">删除失败</div><div id="m_failed" class="stat-value">-</div></div>
+            <div class="stat"><div class="stat-key">回收站条目</div><div id="m_trash" class="stat-value">-</div></div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="section-title">
+            <h2>候选预览</h2>
+            <span id="preview_hint" class="mini">尚未扫描</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>文件</th>
+                  <th>Provider</th>
+                  <th>命中原因</th>
+                  <th>状态摘要</th>
+                  <th>来源</th>
+                </tr>
+              </thead>
+              <tbody id="preview_body">
+                <tr><td colspan="5" class="empty">还没有候选记录</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="section-title">
+            <h2>实时日志</h2>
+            <span class="mini">日志只存在当前页面</span>
+          </div>
+          <pre id="logs">(暂无日志)</pre>
+        </section>
+
+        <section class="panel">
+          <div class="section-title">
+            <h2>本地回收站</h2>
+            <span id="trash_count_badge" class="pill">0 条</span>
+          </div>
+          <div class="panel-desc">恢复时会重新调用当前管理 API 的上传接口写回原始文件。管理 token 不保存在回收站里，恢复前需要重新输入。</div>
+          <div class="actions">
+            <button id="refresh_trash_btn" type="button" class="secondary">刷新回收站</button>
+            <button id="export_trash_btn" type="button" class="secondary">导出回收站</button>
+            <label class="file-button secondary" for="import_trash_input">导入回收站</label>
+            <input id="import_trash_input" type="file" accept="application/json" />
+            <button id="clear_trash_btn" type="button" class="danger">清空回收站</button>
+          </div>
+          <div class="muted-box">回收站数据保存在当前浏览器 IndexedDB。如果你换浏览器、清缓存、使用隐身模式，回收站数据可能不可见或被清理。</div>
+          <div class="trash-wrap">
+            <div id="trash_list" class="trash-list"><div class="empty">回收站是空的</div></div>
+          </div>
+        </section>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const MESSAGE_KEYWORDS = [
+      "额度获取失败：401",
+      '"status":401',
+      '"status": 401',
+      "your authentication token has been invalidated.",
+      "encountered invalidated oauth token for user",
+      "token_invalidated",
+      "token_revoked",
+      "usage_limit_reached",
+    ];
+    const STATUS_KEYWORDS = new Set(["token_invalidated", "token_revoked", "usage_limit_reached"]);
+    const TRASH_DB_NAME = "cpa_cleanup_trash_v1";
+    const TRASH_STORE = "entries";
+
+    const els = {
+      managementUrl: document.getElementById("management_url"),
+      managementToken: document.getElementById("management_token"),
+      probeTimeout: document.getElementById("probe_timeout"),
+      probeWorkers: document.getElementById("probe_workers"),
+      deleteWorkers: document.getElementById("delete_workers"),
+      maxActiveProbes: document.getElementById("max_active_probes"),
+      probeTargetUrl: document.getElementById("probe_target_url"),
+      probeModel: document.getElementById("probe_model"),
+      activeProbe: document.getElementById("active_probe"),
+      enable401Followup: document.getElementById("enable_401_followup"),
+      strictBackup: document.getElementById("strict_backup"),
+      scanBtn: document.getElementById("scan_btn"),
+      deleteBtn: document.getElementById("delete_btn"),
+      clearPreviewBtn: document.getElementById("clear_preview_btn"),
+      logs: document.getElementById("logs"),
+      runStatus: document.getElementById("run_status"),
+      previewHint: document.getElementById("preview_hint"),
+      previewBody: document.getElementById("preview_body"),
+      trashStatus: document.getElementById("trash_status"),
+      trashCountBadge: document.getElementById("trash_count_badge"),
+      trashList: document.getElementById("trash_list"),
+      refreshTrashBtn: document.getElementById("refresh_trash_btn"),
+      exportTrashBtn: document.getElementById("export_trash_btn"),
+      importTrashInput: document.getElementById("import_trash_input"),
+      clearTrashBtn: document.getElementById("clear_trash_btn"),
+      metrics: {
+        scanned: document.getElementById("m_scanned"),
+        matched: document.getElementById("m_matched"),
+        followup: document.getElementById("m_followup"),
+        deleted: document.getElementById("m_deleted"),
+        failed: document.getElementById("m_failed"),
+        trash: document.getElementById("m_trash"),
+      },
+    };
+
+    const state = {
+      scanResult: null,
+      trashReady: false,
+      trashEntries: [],
+      busy: false,
+      logLines: [],
+    };
+
+    class TrashStore {
+      constructor() {
+        this.dbPromise = null;
+      }
+
+      async open() {
+        if (this.dbPromise) {
+          return this.dbPromise;
+        }
+        this.dbPromise = new Promise((resolve, reject) => {
+          const request = indexedDB.open(TRASH_DB_NAME, 1);
+          request.onupgradeneeded = () => {
+            const db = request.result;
+            if (!db.objectStoreNames.contains(TRASH_STORE)) {
+              const store = db.createObjectStore(TRASH_STORE, { keyPath: "id" });
+              store.createIndex("deletedAt", "deletedAt", { unique: false });
+            }
+          };
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error || new Error("IndexedDB 打开失败"));
+        });
+        return this.dbPromise;
+      }
+
+      async transaction(mode, handler) {
+        const db = await this.open();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(TRASH_STORE, mode);
+          const store = tx.objectStore(TRASH_STORE);
+          let result;
+          try {
+            result = handler(store, tx);
+          } catch (error) {
+            reject(error);
+            return;
+          }
+          tx.oncomplete = () => resolve(result);
+          tx.onerror = () => reject(tx.error || new Error("IndexedDB 事务失败"));
+          tx.onabort = () => reject(tx.error || new Error("IndexedDB 事务中止"));
+        });
+      }
+
+      async put(entry) {
+        await this.transaction("readwrite", (store) => { store.put(entry); });
+      }
+
+      async delete(id) {
+        await this.transaction("readwrite", (store) => { store.delete(id); });
+      }
+
+      async clear() {
+        await this.transaction("readwrite", (store) => { store.clear(); });
+      }
+
+      async getAll() {
+        const db = await this.open();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(TRASH_STORE, "readonly");
+          const store = tx.objectStore(TRASH_STORE);
+          const request = store.getAll();
+          request.onsuccess = () => resolve(request.result || []);
+          request.onerror = () => reject(request.error || new Error("读取回收站失败"));
+        });
+      }
+    }
+
+    const trashStore = new TrashStore();
+
+    function nowTime() {
+      return new Date().toLocaleTimeString("zh-CN", { hour12: false });
+    }
+
+    function log(message) {
+      state.logLines.push(`[${nowTime()}] ${message}`);
+      if (state.logLines.length > 3000) {
+        state.logLines = state.logLines.slice(-3000);
+      }
+      els.logs.textContent = state.logLines.join("\n");
+      els.logs.scrollTop = els.logs.scrollHeight;
+    }
+
+    function resetLogs() {
+      state.logLines = [];
+      els.logs.textContent = "(暂无日志)";
+    }
+
+    function setStatus(text, type) {
+      els.runStatus.textContent = text;
+      els.runStatus.className = `pill${type ? " " + type : ""}`;
+    }
+
+    function setTrashStatus(text, type) {
+      els.trashStatus.textContent = text;
+      els.trashStatus.className = `pill${type ? " " + type : ""}`;
+    }
+
+    function setMetric(key, value) {
+      els.metrics[key].textContent = Number.isFinite(value) ? String(value) : "-";
+    }
+
+    function resetMetrics() {
+      setMetric("scanned", NaN);
+      setMetric("matched", NaN);
+      setMetric("followup", NaN);
+      setMetric("deleted", NaN);
+      setMetric("failed", NaN);
+    }
+
+    function setBusy(flag) {
+      state.busy = flag;
+      els.scanBtn.disabled = flag;
+      els.deleteBtn.disabled = flag || !state.scanResult || (!state.scanResult.matched.length && !state.scanResult.preview401.length);
+      els.clearPreviewBtn.disabled = flag;
+      els.refreshTrashBtn.disabled = flag;
+      els.exportTrashBtn.disabled = flag;
+      els.clearTrashBtn.disabled = flag;
+    }
+
+    function parseIntSafe(value, fallback, minimum = 0) {
+      const num = Number.parseInt(value, 10);
+      if (!Number.isFinite(num)) {
+        return fallback;
+      }
+      return Math.max(minimum, num);
+    }
+
+    function trimText(value) {
+      return String(value || "").trim();
+    }
+
+    function escapeHtml(value) {
+      return String(value || "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+    }
+
+    function clipText(value, max = 140) {
+      const text = trimText(value);
+      if (!text) {
+        return "";
+      }
+      return text.length > max ? `${text.slice(0, max)}...` : text;
+    }
+
+    function normalizeManagementRoot(raw) {
+      const value = trimText(raw);
+      if (!value) {
+        return "";
+      }
+      let url;
+      try {
+        url = new URL(value);
+      } catch (error) {
+        throw new Error("Management URL 格式无效");
+      }
+      let path = url.pathname || "";
+      if (!path || path === "/") {
+        path = "/v0/management";
+      }
+      if (path.endsWith("/management.html")) {
+        path = path.slice(0, -"/management.html".length) + "/v0/management";
+      }
+      for (const suffix of ["/auth-files/download", "/auth-files", "/api-call"]) {
+        if (path.endsWith(suffix)) {
+          path = path.slice(0, -suffix.length);
+        }
+      }
+      if (!path || path === "/") {
+        path = "/v0/management";
+      }
+      return `${url.protocol}//${url.host}${path.replace(/\/+$/, "")}`;
+    }
+
+    function buildConfig() {
+      const managementRoot = normalizeManagementRoot(els.managementUrl.value);
+      const token = trimText(els.managementToken.value);
+      if (!managementRoot) {
+        throw new Error("请填写 Management URL");
+      }
+      if (!token) {
+        throw new Error("请填写 Management Token");
+      }
+      return {
+        managementRoot,
+        token,
+        activeProbe: els.activeProbe.checked,
+        enable401Followup: els.enable401Followup.checked,
+        strictBackup: els.strictBackup.checked,
+        probeTimeout: parseIntSafe(els.probeTimeout.value, 8, 1),
+        probeWorkers: parseIntSafe(els.probeWorkers.value, 8, 1),
+        deleteWorkers: parseIntSafe(els.deleteWorkers.value, 4, 1),
+        maxActiveProbes: parseIntSafe(els.maxActiveProbes.value, 120, 0),
+        probeTargetUrl: trimText(els.probeTargetUrl.value),
+        probeModel: trimText(els.probeModel.value) || "gpt-5.1-codex",
+      };
+    }
+
+    async function apiFetch(config, path, options = {}) {
+      const headers = new Headers(options.headers || {});
+      headers.set("Authorization", `Bearer ${config.token}`);
+      if (options.json !== undefined) {
+        headers.set("Content-Type", "application/json");
+      }
+      const response = await fetch(`${config.managementRoot}${path}`, {
+        method: options.method || "GET",
+        headers,
+        body: options.json !== undefined ? JSON.stringify(options.json) : options.body,
+      });
+      if (!response.ok) {
+        let detail = "";
+        try {
+          const body = await response.json();
+          detail = body.error || JSON.stringify(body);
+        } catch (error) {
+          detail = await response.text();
+        }
+        throw new Error(detail || `HTTP ${response.status}`);
+      }
+      return response;
+    }
+
+    async function fetchAuthFiles(config) {
+      const response = await apiFetch(config, "/auth-files");
+      const payload = await response.json();
+      return Array.isArray(payload.files) ? payload.files : [];
+    }
+
+    async function probeAuthIndex(config, authIndex) {
+      const response = await apiFetch(config, "/api-call", {
+        method: "POST",
+        json: {
+          auth_index: authIndex,
+          method: "POST",
+          url: config.probeTargetUrl,
+          header: {
+            Authorization: "Bearer $TOKEN$",
+            "Content-Type": "application/json",
+            "User-Agent": "cpa-cleanup-tool/1.0",
+          },
+          data: JSON.stringify({
+            model: config.probeModel,
+            input: [{ role: "user", content: "ping" }],
+          }),
+        },
+      });
+      const payload = await response.json();
+      return {
+        statusCode: Number(payload.status_code || 0),
+        body: String(payload.body || ""),
+      };
+    }
+
+    async function downloadAuthFile(config, name) {
+      const response = await apiFetch(config, `/auth-files/download?name=${encodeURIComponent(name)}`);
+      return response.text();
+    }
+
+    async function deleteAuthFile(config, name) {
+      await apiFetch(config, `/auth-files?name=${encodeURIComponent(name)}`, { method: "DELETE" });
+    }
+
+    async function uploadAuthFile(config, name, content) {
+      await apiFetch(config, `/auth-files?name=${encodeURIComponent(name)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: content,
+      });
+    }
+
+    function safeStatusMessage(file) {
+      return String(file.status_message || "");
+    }
+
+    function isDeletableFile(file) {
+      return trimText(file.name).endsWith(".json") && trimText(file.source) !== "memory";
+    }
+
+    function reasonFromStatus(file) {
+      const statusMessage = safeStatusMessage(file);
+      if (!statusMessage) {
+        return "";
+      }
+      const lower = statusMessage.toLowerCase();
+      for (const keyword of MESSAGE_KEYWORDS) {
+        if (lower.includes(keyword)) {
+          return keyword;
+        }
+      }
+      try {
+        const parsed = JSON.parse(statusMessage);
+        if (parsed && typeof parsed === "object") {
+          if (Number(parsed.status || 0) === 401) {
+            return "status_401";
+          }
+          const code = String(parsed.error && parsed.error.code || "");
+          if (STATUS_KEYWORDS.has(code)) {
+            return code;
+          }
+        }
+      } catch (error) {
+        return "";
+      }
+      return "";
+    }
+
+    function looks401(file) {
+      if (Number(file.status || 0) === 401) {
+        return true;
+      }
+      const lower = safeStatusMessage(file).toLowerCase();
+      return lower.includes("401") || lower.includes("unauthorized");
+    }
+
+    async function promisePool(items, workerCount, worker) {
+      const concurrency = Math.max(1, workerCount);
+      const results = new Array(items.length);
+      let nextIndex = 0;
+      async function runOne() {
+        while (true) {
+          const current = nextIndex;
+          nextIndex += 1;
+          if (current >= items.length) {
+            return;
+          }
+          results[current] = await worker(items[current], current);
+        }
+      }
+      const runners = Array.from({ length: Math.min(concurrency, items.length || 1) }, () => runOne());
+      await Promise.all(runners);
+      return results;
+    }
+
+    function renderPreview(scanResult) {
+      const { matched, preview401 } = scanResult;
+      if (!matched.length && !preview401.length) {
+        els.previewBody.innerHTML = `<tr><td colspan="5" class="empty">没有发现待删除候选</td></tr>`;
+        els.previewHint.textContent = "扫描完成，没有发现命中项";
+        return;
+      }
+
+      const rows = [];
+      for (const item of matched) {
+        rows.push(`
+          <tr>
+            <td>
+              <div class="trash-title">${escapeHtml(item.name)}</div>
+              <div class="mini">${escapeHtml(item.email || item.account || "")}</div>
+            </td>
+            <td>${escapeHtml(item.provider || "-")}</td>
+            <td><span class="reason-tag">${escapeHtml(item.keyword)}</span></td>
+            <td class="mini">${escapeHtml(clipText(item.status_message || "-", 160))}</td>
+            <td><span class="source-tag">${escapeHtml(item.source || "file")}</span></td>
+          </tr>
+        `);
+      }
+      for (const item of preview401) {
+        rows.push(`
+          <tr>
+            <td>
+              <div class="trash-title">${escapeHtml(item.name)}</div>
+              <div class="mini">${escapeHtml(item.email || item.account || "")}</div>
+            </td>
+            <td>${escapeHtml(item.provider || "-")}</td>
+            <td><span class="reason-tag">401_followup</span></td>
+            <td class="mini">${escapeHtml(clipText(item.status_message || "-", 160))}</td>
+            <td><span class="source-tag">${escapeHtml(item.source || "file")}</span></td>
+          </tr>
+        `);
+      }
+      els.previewBody.innerHTML = rows.join("");
+      els.previewHint.textContent = `主规则 ${matched.length} 项，401 预估 ${preview401.length} 项`;
+    }
+
+    function clearPreview() {
+      state.scanResult = null;
+      els.previewBody.innerHTML = `<tr><td colspan="5" class="empty">还没有候选记录</td></tr>`;
+      els.previewHint.textContent = "尚未扫描";
+      resetMetrics();
+      setStatus("等待执行");
+      setBusy(false);
+    }
+
+    function makeTrashEntry(config, item, content) {
+      return {
+        id: `${item.name}__${Date.now()}__${Math.random().toString(36).slice(2, 8)}`,
+        apiBase: config.managementRoot,
+        name: item.name,
+        provider: item.provider || "",
+        email: item.email || item.account || "",
+        deletedAt: new Date().toISOString(),
+        keyword: item.keyword || "",
+        statusMessage: item.status_message || "",
+        content,
+      };
+    }
+
+    async function refreshTrash() {
+      const items = await trashStore.getAll();
+      items.sort((a, b) => String(b.deletedAt || "").localeCompare(String(a.deletedAt || "")));
+      state.trashEntries = items;
+      els.trashCountBadge.textContent = `${items.length} 条`;
+      setMetric("trash", items.length);
+
+      if (!items.length) {
+        els.trashList.innerHTML = `<div class="empty">回收站是空的</div>`;
+        return;
+      }
+
+      els.trashList.innerHTML = items.map((item) => `
+        <article class="trash-item">
+          <div class="trash-header">
+            <div>
+              <div class="trash-title">${escapeHtml(item.name)}</div>
+              <div class="mini">${escapeHtml(item.provider || "-")} ${item.email ? "· " + escapeHtml(item.email) : ""}</div>
+            </div>
+            <span class="reason-tag">${escapeHtml(item.keyword || "manual_backup")}</span>
+          </div>
+          <div class="trash-meta">
+            <span class="mini">删除时间: ${escapeHtml(new Date(item.deletedAt).toLocaleString("zh-CN"))}</span>
+            <span class="code">${escapeHtml(item.apiBase || "")}</span>
+          </div>
+          <div class="mini">${escapeHtml(clipText(item.statusMessage || "无状态摘要", 180))}</div>
+          <div class="trash-actions">
+            <button type="button" class="secondary" data-action="restore" data-trash-id="${escapeHtml(item.id)}">恢复</button>
+            <button type="button" class="secondary" data-action="download" data-trash-id="${escapeHtml(item.id)}">下载 JSON</button>
+            <button type="button" class="danger" data-action="purge" data-trash-id="${escapeHtml(item.id)}">永久移除</button>
+          </div>
+        </article>
+      `).join("");
+    }
+
+    function findTrashEntry(id) {
+      return state.trashEntries.find((item) => item.id === id) || null;
+    }
+
+    async function ensureTrashReady() {
+      if (!window.indexedDB) {
+        throw new Error("当前浏览器不支持 IndexedDB，无法启用回收站");
+      }
+      await trashStore.open();
+      state.trashReady = true;
+      setTrashStatus("回收站已就绪");
+      await refreshTrash();
+    }
+
+    async function performScan() {
+      const config = buildConfig();
+      resetLogs();
+      resetMetrics();
+      setBusy(true);
+      setStatus("扫描中");
+      log(`使用管理根路径: ${config.managementRoot}`);
+      const files = await fetchAuthFiles(config);
+      log(`拉取 auth-files 成功，总数: ${files.length}`);
+
+      const fixedHits = [];
+      const probeCandidates = [];
+
+      for (const file of files) {
+        if (!isDeletableFile(file)) {
+          continue;
+        }
+        const reason = reasonFromStatus(file);
+        if (reason) {
+          fixedHits.push({ ...file, keyword: reason });
+          continue;
+        }
+        if (
+          config.activeProbe &&
+          trimText(file.provider).toLowerCase() === "codex" &&
+          trimText(file.auth_index)
+        ) {
+          probeCandidates.push(file);
+        }
+      }
+
+      if (config.maxActiveProbes >= 0 && probeCandidates.length > config.maxActiveProbes) {
+        log(`主动探测候选 ${probeCandidates.length} 个，仅探测前 ${config.maxActiveProbes} 个`);
+        probeCandidates.length = config.maxActiveProbes;
+      }
+
+      const probedHits = [];
+      if (config.activeProbe && config.maxActiveProbes !== 0 && probeCandidates.length) {
+        log(`开始主动探测，候选 ${probeCandidates.length} 个`);
+        let finished = 0;
+        const results = await promisePool(probeCandidates, config.probeWorkers, async (item) => {
+          try {
+            const probeResult = await probeAuthIndex(config, trimText(item.auth_index));
+            const lower = probeResult.body.toLowerCase();
+            let reason = "";
+            if (probeResult.statusCode === 401) {
+              reason = "probe_status_401";
+            } else if (lower.includes("401") || lower.includes("unauthorized")) {
+              reason = "probe_body_401";
+            } else {
+              for (const keyword of MESSAGE_KEYWORDS) {
+                if (lower.includes(keyword)) {
+                  reason = `probe_${keyword}`;
+                  break;
+                }
+              }
+            }
+            finished += 1;
+            if (reason) {
+              log(`探测命中: ${item.name} -> ${reason}`);
+            }
+            if (finished % 20 === 0 || finished === probeCandidates.length) {
+              log(`探测进度: ${finished}/${probeCandidates.length}`);
+            }
+            return reason ? { ...item, keyword: reason } : null;
+          } catch (error) {
+            finished += 1;
+            log(`探测异常: ${item.name} -> ${error.message}`);
+            if (finished % 20 === 0 || finished === probeCandidates.length) {
+              log(`探测进度: ${finished}/${probeCandidates.length}`);
+            }
+            return null;
+          }
+        });
+        for (const item of results) {
+          if (item) {
+            probedHits.push(item);
+          }
+        }
+      } else {
+        log("主动探测已关闭或无候选");
+      }
+
+      const merged = new Map();
+      for (const item of [...fixedHits, ...probedHits]) {
+        if (!merged.has(item.name)) {
+          merged.set(item.name, item);
+        }
+      }
+
+      const matched = Array.from(merged.values()).sort((a, b) => a.name.localeCompare(b.name));
+      const preview401 = config.enable401Followup
+        ? files.filter((file) => isDeletableFile(file) && !merged.has(file.name) && looks401(file))
+            .sort((a, b) => String(a.name).localeCompare(String(b.name)))
+        : [];
+
+      state.scanResult = { config, files, matched, preview401 };
+      setMetric("scanned", files.length);
+      setMetric("matched", matched.length);
+      setMetric("followup", preview401.length);
+      setMetric("deleted", 0);
+      setMetric("failed", 0);
+      renderPreview(state.scanResult);
+      log(`扫描完成: 主规则命中 ${matched.length} 个，401 预估 ${preview401.length} 个`);
+      setStatus("扫描完成", matched.length || preview401.length ? "" : "warn");
+      setBusy(false);
+    }
+
+    async function backupAndDelete(config, item, failureList) {
+      let content = "";
+      try {
+        content = await downloadAuthFile(config, item.name);
+        await trashStore.put(makeTrashEntry(config, item, content));
+      } catch (error) {
+        if (config.strictBackup) {
+          failureList.push({ name: item.name, error: `备份失败: ${error.message}` });
+          log(`跳过删除: ${item.name} -> 备份失败: ${error.message}`);
+          return false;
+        }
+        log(`备份失败但继续删除: ${item.name} -> ${error.message}`);
+      }
+
+      try {
+        await deleteAuthFile(config, item.name);
+        log(`已移入回收站并删除: ${item.name}`);
+        return true;
+      } catch (error) {
+        failureList.push({ name: item.name, error: error.message });
+        log(`删除失败: ${item.name} -> ${error.message}`);
+        return false;
+      }
+    }
+
+    async function performDelete() {
+      if (!state.trashReady) {
+        throw new Error("回收站尚未就绪，禁止删除");
+      }
+      if (!state.scanResult) {
+        throw new Error("请先扫描候选");
+      }
+
+      const { config, matched } = state.scanResult;
+      const estimated401 = state.scanResult.preview401.length;
+      const totalEstimate = matched.length + estimated401;
+      if (!totalEstimate) {
+        throw new Error("当前没有待删除候选");
+      }
+
+      const confirmed = window.confirm(
+        `将尝试删除 ${totalEstimate} 个候选（主规则 ${matched.length} 个，401 预估 ${estimated401} 个）。\n` +
+        "删除前会先把原始 JSON 写入本地回收站。是否继续？"
+      );
+      if (!confirmed) {
+        return;
+      }
+
+      const failures = [];
+      let deletedCount = 0;
+      setBusy(true);
+      setStatus("删除中", "warn");
+      log(`开始删除主规则命中项: ${matched.length} 个`);
+
+      const mainResults = await promisePool(matched, config.deleteWorkers, async (item) => {
+        const ok = await backupAndDelete(config, item, failures);
+        if (ok) {
+          deletedCount += 1;
+        }
+        return ok;
+      });
+
+      const deletedNames = new Set();
+      mainResults.forEach((ok, index) => {
+        if (ok) {
+          deletedNames.add(matched[index].name);
+        }
+      });
+
+      if (config.enable401Followup) {
+        log("开始执行 401 补删");
+        try {
+          const files = await fetchAuthFiles(config);
+          const followupTargets = files.filter((file) => isDeletableFile(file) && !deletedNames.has(file.name) && looks401(file));
+          log(`401 补删候选: ${followupTargets.length} 个`);
+          await promisePool(followupTargets, config.deleteWorkers, async (item) => {
+            const ok = await backupAndDelete(config, { ...item, keyword: "401_followup" }, failures);
+            if (ok) {
+              deletedCount += 1;
+            }
+            return ok;
+          });
+        } catch (error) {
+          failures.push({ name: "<401_followup>", error: error.message });
+          log(`401 补删失败: ${error.message}`);
+        }
+      }
+
+      setMetric("deleted", deletedCount);
+      setMetric("failed", failures.length);
+      await refreshTrash();
+      log(`删除结束: 成功 ${deletedCount} 个，失败 ${failures.length} 个`);
+      setStatus(failures.length ? "删除完成（含失败）" : "删除完成", failures.length ? "warn" : "");
+      setBusy(false);
+
+      try {
+        await performScan();
+      } catch (error) {
+        log(`删除后刷新预览失败: ${error.message}`);
+      }
+    }
+
+    async function restoreTrashEntry(id) {
+      const entry = findTrashEntry(id);
+      if (!entry) {
+        throw new Error("回收站条目不存在");
+      }
+      const config = buildConfig();
+      if (config.managementRoot !== entry.apiBase) {
+        const confirmed = window.confirm(
+          `当前 Management URL 与回收站记录不一致。\n当前: ${config.managementRoot}\n记录: ${entry.apiBase}\n\n仍然按当前地址恢复吗？`
+        );
+        if (!confirmed) {
+          return;
+        }
+      }
+      await uploadAuthFile(config, entry.name, entry.content);
+      await trashStore.delete(entry.id);
+      log(`已恢复: ${entry.name}`);
+      await refreshTrash();
+      if (state.scanResult) {
+        try {
+          await performScan();
+        } catch (error) {
+          log(`恢复后刷新预览失败: ${error.message}`);
+        }
+      }
+    }
+
+    async function purgeTrashEntry(id) {
+      const entry = findTrashEntry(id);
+      if (!entry) {
+        return;
+      }
+      const confirmed = window.confirm(`确定永久移除回收站条目 ${entry.name} 吗？此操作不可恢复。`);
+      if (!confirmed) {
+        return;
+      }
+      await trashStore.delete(id);
+      log(`已永久移除回收站条目: ${entry.name}`);
+      await refreshTrash();
+    }
+
+    function downloadText(filename, content) {
+      const blob = new Blob([content], { type: "application/json;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    async function exportTrash() {
+      const items = await trashStore.getAll();
+      const content = JSON.stringify(items, null, 2);
+      const stamp = new Date().toISOString().replaceAll(":", "-");
+      downloadText(`cpa-cleanup-trash-${stamp}.json`, content);
+      log(`已导出回收站，共 ${items.length} 条`);
+    }
+
+    async function importTrash(file) {
+      const text = await file.text();
+      const payload = JSON.parse(text);
+      if (!Array.isArray(payload)) {
+        throw new Error("导入文件格式无效，期望数组");
+      }
+      let imported = 0;
+      for (const raw of payload) {
+        if (!raw || typeof raw !== "object" || !trimText(raw.name) || !trimText(raw.content)) {
+          continue;
+        }
+        await trashStore.put({
+          id: trimText(raw.id) || `${trimText(raw.name)}__${Date.now()}__${Math.random().toString(36).slice(2, 8)}`,
+          apiBase: trimText(raw.apiBase),
+          name: trimText(raw.name),
+          provider: trimText(raw.provider),
+          email: trimText(raw.email),
+          deletedAt: trimText(raw.deletedAt) || new Date().toISOString(),
+          keyword: trimText(raw.keyword),
+          statusMessage: trimText(raw.statusMessage),
+          content: String(raw.content),
+        });
+        imported += 1;
+      }
+      await refreshTrash();
+      log(`已导入回收站条目: ${imported} 条`);
+    }
+
+    async function clearTrash() {
+      const confirmed = window.confirm("确定清空整个本地回收站吗？此操作不可恢复。");
+      if (!confirmed) {
+        return;
+      }
+      await trashStore.clear();
+      await refreshTrash();
+      log("本地回收站已清空");
+    }
+
+    els.scanBtn.addEventListener("click", async () => {
+      try {
+        await performScan();
+      } catch (error) {
+        log(`扫描失败: ${error.message}`);
+        setStatus(`扫描失败: ${error.message}`, "warn");
+        setBusy(false);
+      }
+    });
+
+    els.deleteBtn.addEventListener("click", async () => {
+      try {
+        await performDelete();
+      } catch (error) {
+        log(`删除失败: ${error.message}`);
+        setStatus(`删除失败: ${error.message}`, "warn");
+        setBusy(false);
+      }
+    });
+
+    els.clearPreviewBtn.addEventListener("click", () => {
+      clearPreview();
+      resetLogs();
+    });
+
+    els.refreshTrashBtn.addEventListener("click", async () => {
+      try {
+        await refreshTrash();
+        log("回收站已刷新");
+      } catch (error) {
+        log(`刷新回收站失败: ${error.message}`);
+      }
+    });
+
+    els.exportTrashBtn.addEventListener("click", async () => {
+      try {
+        await exportTrash();
+      } catch (error) {
+        log(`导出回收站失败: ${error.message}`);
+      }
+    });
+
+    els.importTrashInput.addEventListener("change", async (event) => {
+      const file = event.target.files && event.target.files[0];
+      if (!file) {
+        return;
+      }
+      try {
+        await importTrash(file);
+      } catch (error) {
+        log(`导入回收站失败: ${error.message}`);
+      } finally {
+        event.target.value = "";
+      }
+    });
+
+    els.clearTrashBtn.addEventListener("click", async () => {
+      try {
+        await clearTrash();
+      } catch (error) {
+        log(`清空回收站失败: ${error.message}`);
+      }
+    });
+
+    els.trashList.addEventListener("click", async (event) => {
+      const button = event.target.closest("button[data-action]");
+      if (!button) {
+        return;
+      }
+      const id = button.dataset.trashId;
+      const action = button.dataset.action;
+      if (!id || !action) {
+        return;
+      }
+      try {
+        button.disabled = true;
+        if (action === "restore") {
+          await restoreTrashEntry(id);
+        } else if (action === "purge") {
+          await purgeTrashEntry(id);
+        } else if (action === "download") {
+          const entry = findTrashEntry(id);
+          if (!entry) {
+            throw new Error("回收站条目不存在");
+          }
+          downloadText(entry.name, entry.content);
+          log(`已下载回收站备份: ${entry.name}`);
+        }
+      } catch (error) {
+        log(`回收站操作失败: ${error.message}`);
+      } finally {
+        button.disabled = false;
+      }
+    });
+
+    async function bootstrap() {
+      clearPreview();
+      try {
+        await ensureTrashReady();
+      } catch (error) {
+        state.trashReady = false;
+        setTrashStatus("回收站不可用", "warn");
+        els.deleteBtn.disabled = true;
+        log(`回收站初始化失败: ${error.message}`);
+      }
+    }
+
+    bootstrap();
+  </script>
+</body>
+</html>
