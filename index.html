@@ -204,6 +204,7 @@
         删除前会先把原始 auth 文件备份到当前浏览器本地回收站，再调用现有管理 API 删除，尽量降低误删风险。
       </div>
       <div class="notice-strip">
+        <span class="pill">当前仅支持 Codex 清理</span>
         <span class="pill">不修改上游二进制</span>
         <span class="pill">不修改现有管理页</span>
         <span class="pill warn">回收站保存的是原始凭证 JSON，请只在受信任浏览器使用</span>
@@ -212,6 +213,9 @@
         思路参考开源项目
         <a href="https://github.com/qcmuu/cpa-codex-cleanup" target="_blank" rel="noopener noreferrer">qcmuu/cpa-codex-cleanup</a>，
         当前页面为独立整理后的实现。
+      </div>
+      <div class="mini">
+        目前优先解决 Codex 清理场景；如果后续有时间，或者实际反馈不错，再考虑继续扩展其他模型。
       </div>
     </section>
 
